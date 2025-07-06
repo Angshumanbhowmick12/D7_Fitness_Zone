@@ -127,8 +127,68 @@ exports.Prisma.UserScalarFieldEnum = {
   password: 'password',
   phone: 'phone',
   role: 'role',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.UserProfileScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  height: 'height',
+  weight: 'weight',
+  joinedAt: 'joinedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
+};
+
+exports.Prisma.MembershipScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  membershipType: 'membershipType',
+  startDate: 'startDate',
+  endDate: 'endDate',
+  status: 'status',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.WorkoutPlanScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  description: 'description',
+  trainerId: 'trainerId',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.MemberWorkoutScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  workoutPlanId: 'workoutPlanId',
+  date: 'date',
+  duration: 'duration',
+  caloriesBurned: 'caloriesBurned',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.WorkoutChartScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  date: 'date',
+  exercise: 'exercise',
+  duration: 'duration',
+  sets: 'sets',
+  reps: 'reps',
+  weight: 'weight',
+  notes: 'notes',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.PaymentScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  amount: 'amount',
+  paymentDate: 'paymentDate',
+  paymentMethod: 'paymentMethod',
+  status: 'status',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.AccountScalarFieldEnum = {
@@ -141,6 +201,16 @@ exports.Prisma.AccountScalarFieldEnum = {
   expiresAt: 'expiresAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
+};
+
+exports.Prisma.BodyMetricScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  date: 'date',
+  weight: 'weight',
+  height: 'height',
+  bmi: 'bmi',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.SortOrder = {
@@ -163,13 +233,44 @@ exports.Role = exports.$Enums.Role = {
   ADMIN: 'ADMIN'
 };
 
+exports.MembershipType = exports.$Enums.MembershipType = {
+  BASIC: 'BASIC',
+  PREMIUM: 'PREMIUM',
+  VIP: 'VIP'
+};
+
+exports.MembershipStatus = exports.$Enums.MembershipStatus = {
+  ACTIVE: 'ACTIVE',
+  EXPIRED: 'EXPIRED'
+};
+
+exports.PaymentMethod = exports.$Enums.PaymentMethod = {
+  CARD: 'CARD',
+  UPI: 'UPI',
+  CASH: 'CASH'
+};
+
+exports.PaymentStatus = exports.$Enums.PaymentStatus = {
+  PAID: 'PAID',
+  PENDING: 'PENDING',
+  FAILED: 'FAILED'
+};
+
 exports.AuthProvider = exports.$Enums.AuthProvider = {
-  GOOGLE: 'GOOGLE'
+  GOOGLE: 'GOOGLE',
+  FACEBOOK: 'FACEBOOK'
 };
 
 exports.Prisma.ModelName = {
   User: 'User',
-  Account: 'Account'
+  UserProfile: 'UserProfile',
+  Membership: 'Membership',
+  WorkoutPlan: 'WorkoutPlan',
+  MemberWorkout: 'MemberWorkout',
+  WorkoutChart: 'WorkoutChart',
+  Payment: 'Payment',
+  Account: 'Account',
+  BodyMetric: 'BodyMetric'
 };
 
 /**

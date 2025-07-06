@@ -20,9 +20,35 @@ enum Role {
   ADMIN
 }
 
+enum MembershipType {
+  BASIC
+  PREMIUM
+  VIP
+}
+
+enum MembershipStatus {
+  ACTIVE
+  EXPIRED
+}
+
+enum PaymentMethod {
+  CARD
+  UPI
+  CASH
+}
+
+enum PaymentStatus {
+  PAID
+  PENDING
+  FAILED
+}
+
 enum AuthProvider {
   GOOGLE
+  FACEBOOK
 }
+
+// ========== Models ==========
 
 model User {
   id        String   @id @default(uuid())
@@ -30,18 +56,109 @@ model User {
   email     String   @unique
   password  String
   phone     String?
-  role      Role     @default(MEMBER)
+  role      Role
+  createdAt DateTime @default(now())
+
+  // Relations
+  profile        UserProfile?
+  memberships    Membership[]
+  workoutPlans   WorkoutPlan[]   @relation("TrainerWorkoutPlans")
+  memberWorkouts MemberWorkout[]
+  payments       Payment[]
+  accounts       Account[]
+  workoutCharts  WorkoutChart[]
+  bodyMetrics    BodyMetric[]
+}
+
+model UserProfile {
+  id     String @id @default(uuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @unique
+
+  height   Float? // in cm
+  weight   Float? // in kg
+  joinedAt DateTime? // when the user joined the gym
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
 
-  accounts Account[]
+model Membership {
+  id     String @id @default(uuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  membershipType MembershipType
+  startDate      DateTime
+  endDate        DateTime
+  status         MembershipStatus
+
+  createdAt DateTime @default(now())
+}
+
+model WorkoutPlan {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  trainer     User?    @relation("TrainerWorkoutPlans", fields: [trainerId], references: [id], onDelete: SetNull)
+  trainerId   String?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  memberWorkouts MemberWorkout[]
+}
+
+model MemberWorkout {
+  id     String @id @default(uuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  workoutPlan   WorkoutPlan @relation(fields: [workoutPlanId], references: [id], onDelete: Cascade)
+  workoutPlanId String
+
+  date           DateTime
+  duration       Int? // in minutes
+  caloriesBurned Int?
+
+  createdAt DateTime @default(now())
+}
+
+model WorkoutChart {
+  id     String @id @default(uuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  date     DateTime
+  exercise String
+  duration Int? // minutes
+  sets     Int?
+  reps     Int?
+  weight   Float? // in kg
+  notes    String?
+
+  createdAt DateTime @default(now())
+}
+
+model Payment {
+  id     String @id @default(uuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  amount        Decimal       @db.Decimal(10, 2)
+  paymentDate   DateTime
+  paymentMethod PaymentMethod
+  status        PaymentStatus
+
+  createdAt DateTime @default(now())
 }
 
 model Account {
-  id                String       @id @default(uuid())
-  userId            String
+  id     String @id @default(uuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
   provider          AuthProvider
-  providerAccountId String //Id from google
+  providerAccountId String
   accessToken       String?
   refreshToken      String?
   expiresAt         Int?
@@ -49,7 +166,18 @@ model Account {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@unique([provider, providerAccountId])
+}
+
+model BodyMetric {
+  id     String @id @default(uuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  date   DateTime
+  weight Float? // in kg
+  height Float? // in cm
+  bmi    Float? // Optional: calculated externally
+
+  createdAt DateTime @default(now())
 }
