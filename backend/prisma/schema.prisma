@@ -21,9 +21,9 @@ enum Role {
 }
 
 enum MembershipType {
-  BASIC
-  PREMIUM
-  VIP
+  MONTHLY
+  SIX_MONTHS
+  YEARLY
 }
 
 enum MembershipStatus {
@@ -48,7 +48,36 @@ enum AuthProvider {
   FACEBOOK
 }
 
-// ========== Models ==========
+enum DietStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ChallengeStatus {
+  ACTIVE
+  COMPLETED
+  EXPIRED
+}
+
+enum NotificationType {
+  DIET_APPROVED
+  DIET_REJECTED
+  WORKOUT_REMINDER
+  MEMBERSHIP_EXPIRE
+  CHALLENGE_UPDATE
+  GENERAL
+}
+
+enum EmojiType {
+  LIKE
+  LOVE
+  FIRE
+  CLAP
+  OTHER
+}
+
+// ================= Models =================
 
 model User {
   id             String           @id @default(uuid())
@@ -69,6 +98,22 @@ model User {
   accounts       Account[]
   workoutCharts  WorkoutChart[]
   bodyMetrics    BodyMetric[]
+  posts          Post[]
+  diets          Diet[]           @relation("UserDiets")
+  dietApprovals  Diet[]           @relation("TrainerVerifiesDiets")
+  notifications  Notification[]
+  groups         GroupMember[]
+  achievements   AchievementProgress[]
+  challenges     ChallengeParticipation[]
+  messagesSent   Message[]        @relation("SentMessages")
+  messagesReceived Message[]      @relation("ReceivedMessages")
+  postComments   PostComment[]
+  postReactions  PostReaction[]
+  commentReactions CommentReaction[]
+  wearableData   WearableData[]
+
+  @@index([email])
+  @@index([role])
 }
 
 model UserProfile {
@@ -76,15 +121,16 @@ model UserProfile {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId     String   @unique
 
-  height     Float?   // in cm
-  weight     Float?   // in kg
-  goalWeight Float?   // target weight in kg
-  goalMuscle Float?   // target muscle mass percentage
-  phone      String?
-  joinedAt   DateTime? // when the user joined the gym
+  height     Float?   // cm
+  weight     Float?   // kg
+  joinedAt   DateTime?
+  goalWeight Float?
+  goalMuscle Float?
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model Membership {
@@ -98,18 +144,25 @@ model Membership {
   status          MembershipStatus
 
   createdAt       DateTime         @default(now())
+
+  @@index([userId])
+  @@index([status])
+  @@index([endDate])
 }
 
 model WorkoutPlan {
   id             String           @id @default(uuid())
   name           String
   description    String?
+  bodyPart       String?           // e.g., Chest, Legs, Back
   trainer        User?            @relation("TrainerWorkoutPlans", fields: [trainerId], references: [id], onDelete: SetNull)
   trainerId      String?
   createdAt      DateTime         @default(now())
 
-  // Relations
   memberWorkouts MemberWorkout[]
+
+  @@index([trainerId])
+  @@index([bodyPart])
 }
 
 model MemberWorkout {
@@ -121,10 +174,14 @@ model MemberWorkout {
   workoutPlanId  String
 
   date           DateTime
-  duration       Int?           // in minutes
+  duration       Int?           // minutes
   caloriesBurned Int?
 
   createdAt      DateTime       @default(now())
+
+  @@index([userId])
+  @@index([workoutPlanId])
+  @@index([date])
 }
 
 model WorkoutChart {
@@ -137,10 +194,14 @@ model WorkoutChart {
   duration   Int?     // minutes
   sets       Int?
   reps       Int?
-  weight     Float?   // in kg
+  weight     Float?   // kg
   notes      String?
 
   createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([date])
+  @@index([exercise])
 }
 
 model Payment {
@@ -153,7 +214,17 @@ model Payment {
   paymentMethod PaymentMethod
   status        PaymentStatus
 
+  // Razorpay specific fields (optional)
+  razorpayOrderId    String?
+  razorpayPaymentId  String?
+  razorpaySignature  String?
+
   createdAt     DateTime       @default(now())
+
+  @@index([userId])
+  @@index([paymentDate])
+  @@index([status])
+  @@index([paymentMethod])
 }
 
 model Account {
@@ -171,6 +242,8 @@ model Account {
   updatedAt         DateTime       @updatedAt
 
   @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@index([provider])
 }
 
 model BodyMetric {
@@ -179,9 +252,225 @@ model BodyMetric {
   userId     String
 
   date       DateTime
-  weight     Float?   // in kg
-  height     Float?   // in cm
-  bmi        Float?   // Optional: calculated externally
+  weight     Float?
+  height     Float?
+  bmi        Float?
 
   createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([date])
+}
+
+model Diet {
+  id          String       @id @default(uuid())
+  user        User         @relation("UserDiets", fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  mealType    String
+  mealDetails String
+  calories    Int?
+  protein     Float?
+  carbs       Float?
+  fats        Float?
+  status      DietStatus   @default(PENDING)
+  trainer     User?        @relation("TrainerVerifiesDiets", fields: [trainerId], references: [id], onDelete: SetNull)
+  trainerId   String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  notifications Notification[]
+
+  @@index([userId])
+  @@index([trainerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Post {
+  id             String          @id @default(uuid())
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  caption        String?
+  mediaUrl       String?
+  mediaPublicId  String?
+  mediaType      String?         // image/video
+  createdAt      DateTime         @default(now())
+
+  comments       PostComment[]
+  reactions      PostReaction[]
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model PostComment {
+  id             String          @id @default(uuid())
+  post           Post            @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId         String
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  content        String
+  parentComment  PostComment?    @relation("NestedComments", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  parentCommentId String?
+  replies        PostComment[]   @relation("NestedComments")
+  createdAt      DateTime         @default(now())
+  reactions      CommentReaction[]
+
+  @@index([postId])
+  @@index([userId])
+  @@index([parentCommentId])
+  @@index([createdAt])
+}
+
+model PostReaction {
+  id        String     @id @default(uuid())
+  post      Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  emoji     EmojiType
+  createdAt DateTime    @default(now())
+
+  @@unique([postId, userId, emoji])
+  @@index([postId])
+  @@index([userId])
+}
+
+model CommentReaction {
+  id        String          @id @default(uuid())
+  comment   PostComment     @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  commentId String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  emoji     EmojiType
+  createdAt DateTime        @default(now())
+
+  @@unique([commentId, userId, emoji])
+  @@index([commentId])
+  @@index([userId])
+}
+
+// ================= Gamification =================
+model Achievement {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  icon        String?  // optional badge icon
+  createdAt   DateTime @default(now())
+
+  progress    AchievementProgress[]
+}
+
+model AchievementProgress {
+  id            String   @id @default(uuid())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+  achievementId String
+  unlocked      Boolean   @default(false)
+  unlockedAt    DateTime?
+
+  @@index([userId])
+  @@index([achievementId])
+  @@index([unlocked])
+}
+
+// ================= Challenges =================
+model Challenge {
+  id          String           @id @default(uuid())
+  title       String
+  description String
+  startDate   DateTime
+  endDate     DateTime
+  status      ChallengeStatus @default(ACTIVE)
+  createdAt   DateTime         @default(now())
+  participants ChallengeParticipation[]
+
+  @@index([status])
+  @@index([startDate])
+  @@index([endDate])
+}
+
+model ChallengeParticipation {
+  id          String    @id @default(uuid())
+  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  challengeId String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  progress    Float?    // e.g., % completed
+  joinedAt    DateTime  @default(now())
+
+  @@index([challengeId])
+  @@index([userId])
+  @@index([progress])
+}
+
+// ================= Groups & Messaging =================
+model Group {
+  id        String         @id @default(uuid())
+  name      String
+  description String?
+  createdAt DateTime       @default(now())
+  members   GroupMember[]
+}
+
+model GroupMember {
+  id       String @id @default(uuid())
+  group    Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId  String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
+  joinedAt DateTime @default(now())
+
+  @@index([groupId])
+  @@index([userId])
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  senderId   String
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  receiverId String
+  content    String
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([read])
+  @@index([createdAt])
+}
+
+// ================= Notifications =================
+model Notification {
+  id        String           @id @default(uuid())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  diet      Diet?            @relation(fields: [dietId], references: [id], onDelete: Cascade)
+  dietId    String?
+  message   String
+  type      NotificationType
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId])
+  @@index([read])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// ================= Wearable Integration =================
+model WearableData {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  steps     Int?
+  heartRate Float?
+  calories  Int?
+  sleepHours Float?
+  date      DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([date])
 }
