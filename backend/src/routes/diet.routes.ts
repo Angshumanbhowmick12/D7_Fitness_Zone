@@ -11,3 +11,5 @@ router.put('/:id',authenticate,updateDietEntry)
 router.delete('/:id',authenticate,deleteDiet)
 router.patch('/approve/:id',authenticate,authorize('ADMIN','TRAINER'),deitApprover)
 router.get('/stats/summary',authenticate,nutritionSummary)
+
+export default router;
